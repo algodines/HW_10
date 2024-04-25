@@ -1,0 +1,258 @@
+---
+title: "Homework 10"
+author: "Annika Godines"
+date: "2024-04-25"
+output: 
+  html_document:
+    toc: yes
+    toc_float: yes
+---
+
+```{r global_options, echo=FALSE, warning = FALSE}
+# Set Parameter
+knitr::opts_chunk$set(fig.height=6, fig.width=8, warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80))
+```
+
+```{r echo = FALSE, include = FALSE}
+#Load Library
+library(ggplot2)
+library(dplyr)
+library(kableExtra)
+library(broom)
+```
+
+```{r echo = FALSE, include = FALSE}
+#Import Data Sets
+redline <- read.csv("redlining.csv")
+groceries <- read.csv("groceries.csv")
+```
+
+
+# **Github**
+
+Github to access code is [here!](https://github.com/algodines/HW_10.git)
+
+
+# **Problem 1 : Redlining**
+
+Use a linear regression model to assess whether there is an association between the number of FAIR policies and the racial/ethic composition of a ZIP code, adjusting for the fire, age, and income variables.
+
+```{r echo = FALSE, include = FALSE}
+# Create Linear Regression Model 
+linear_regression_model <- lm(policies ~ minority + fire + age + income, data = redline)
+
+#Summarize Outcome
+summary(linear_regression_model)
+
+#Extract Individual Coefficient Values
+minority_coef <- coef(linear_regression_model)["minority"]
+fire_coef <- coef(linear_regression_model)["fire"]
+age_coef <- coef(linear_regression_model)["age"]
+income_coef <- coef(linear_regression_model)["income"]
+
+#Confidence Interval Calculator 
+confidence_interval <-confint(linear_regression_model)
+
+#Extract Individual confidence intervals
+minority_conf_interval <- confint(linear_regression_model)["minority", ]
+fire_conf_interval <- confint(linear_regression_model)["fire", ]
+age_conf_interval <- confint(linear_regression_model)["age", ]
+income_conf_interval <- confint(linear_regression_model)["income", ]
+
+# Extract Individual P values
+minority_p_value <- summary(linear_regression_model)$coefficients["minority", 4]
+fire_p_value <- summary(linear_regression_model)$coefficients["fire", 4]
+age_p_value <- summary(linear_regression_model)$coefficients["age", 4]
+income_p_value <- summary(linear_regression_model)$coefficients["income", 4]
+
+# R - Squared
+r_squared <- summary(linear_regression_model)$adj.r.squared
+
+```
+
+The question posed in this situation is **what is the association between the number of FAIR policies and the racial/ethnic composition of a Zip code, adjusting for fire incidents, age of housing units, and median family income**. To approach this question, a linear regression model was used by calling the 'lm()' function in R. The dependent variable in this scenario was the number of FAIR policies per 100 housing units, and the independent variables included the percentage of minority residents, fire incidents per 100 housing units, percentage of housing units built before WWII, and median family income in thousands of dollars. 
+
+The results from the linear model shows the coefficient for *minority* is `r minority_coef` (p-value = `r minority_p_value`), with a 95% confidence interval of `r round(minority_conf_interval, 2)` indicating for every one-unit increase in the percentage of minority residents, the number of FAIR policies per 100 housing units increases by approximately `r round(minority_coef, 2)` after adjusting for other variables. The coefficient for *fire* is `r fire_coef` (p-value = `r fire_p_value`), with a 95% confidence interval of `r round(fire_conf_interval, 2)`, suggesting that for every one-unit increase in fire incidents per 100 housing units, the number of FAIR policies per 100 housing units increases by approximately `r round(fire_coef, 2)` after adjusting for other variables. The coefficient for *age* is `r age_coef` (p-value = `r age_p_value`), with a 95% confidence interval of `r round(age_conf_interval, 2)`, implying the age of housing units doesn't have a statistical significant association with the number of FAIR policies after some adjusting. The coefficient for *income* is `r income_coef` (p-value = `r income_p_value`), with a confidence interval of `r round(income_conf_interval, 2)` indicating median family income doesn't have a statistically significant association with the number of FAIR policies after adjusting for other variables. The *overall model* has an adjusted R-squared of `r round((r_squared * 100),2)`% of the variation in the number of FAIR policies can be explained by the independent variables included in the model.
+
+To *conclude*, this linear model regression analysis indicates there's statistically significant positive association between the percentage of *minority* residents and the number of FAIR policies, with addition of *fire* incidents and the number of FAIR policies. However, the *age* of housing units and the median family *income* doesn't have any statistical significance to the number of FAIR policies. This implies *minority* composition and *fire* incidents are predictors in access to private home insurance markets despite accounting for other factors. 
+
+# **Problem 2: Grocery Store Prices **
+
+**Part A** : What kind of price difference do we see across the different stores?
+
+
+```{r echo = FALSE}
+# Wrangle the data to calculate average price per store
+avg_price_per_store <- groceries %>%
+  group_by(Store) %>%
+  summarise(average_prices = mean(Price), .groups = 'drop')
+
+# Calculating Mean, Median , & Standard Deviation
+median <- median(avg_price_per_store$average_prices)
+mean <- mean(avg_price_per_store$average_prices)
+standard_deviation <- sd(avg_price_per_store$average_prices)
+
+# Plotting
+ggplot(avg_price_per_store, aes(x = average_prices, y = reorder(Store, average_prices))) +
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(title = "Average Price of Products Across Different Stores",
+       x = "Average Price ($)",
+       y = "Store") +
+  theme_classic() +
+  coord_flip() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.7))  
+```
+
+The comparison of the average prices of grocery products across stores in Houston, Austin, and Fort Worth. The median price was `r round(median, 2)`, the mean was `r round(mean, 2)`, and the standard deviation was `r round(standard_deviation, 2)`. 
+
+**Part B**: Make a bar graph with Product on the vertical axis and number of stores selling that product on the horizontal axis.
+
+```{r echo = FALSE}
+# Wrangle the data to count the number of stores selling each product
+stores_per_product <- groceries %>%
+  group_by(Product) %>%
+  summarise(num_stores = n_distinct(Store))
+
+# Plotting
+ggplot(stores_per_product, aes(x = num_stores, y = reorder(Product, num_stores))) +
+  geom_bar(stat = "identity", fill = "red") +
+  labs(title = "Number of Stores Selling Each Product",
+       x = "Number of Stores",
+       y = "Product") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(angle = 0, hjust = 1))
+```
+
+
+**Part C**: Use regression to try to isolate the effects of Type of store versus the actual products being sold. Fit a model for Price versus Product and the Type of store.
+
+Coefficients are not available for either conveniecne or grocery stores.
+
+
+**Part D**: Which two stores seem to charge the lowest prices when comparing the same product? Which two stores seem to charge the highest prices when comparing the same product?
+
+```{r echo = FALSE}
+
+# Group the data by product
+grouped_data <- groceries %>%
+  group_by(Product)
+
+# Find the store with the lowest price for each product
+lowest_prices <- grouped_data %>%
+  filter(Price == min(Price)) %>%
+  select(Product, Store, Price)
+
+# Find the store with the highest price for each product
+highest_prices <- grouped_data %>%
+  filter(Price == max(Price)) %>%
+  select(Product, Store, Price)
+
+# Aggregate the results to find the overall stores with the lowest and highest prices
+stores_lowest_prices <- lowest_prices %>%
+  group_by(Store) %>%
+  summarize(Count = n()) %>%
+  arrange(Count)
+
+stores_highest_prices <- highest_prices %>%
+  group_by(Store) %>%
+  summarize(Count = n()) %>%
+  arrange(desc(Count))
+
+# Display the stores with the lowest and highest prices
+cat("Stores with the lowest prices:\n")
+print(stores_lowest_prices)
+
+cat("\nStores with the highest prices:\n")
+print(stores_highest_prices)
+
+
+```
+
+As shown by the tables, **Albertsons** and **Kroger Fresh Fare** are the stores that charge the **least** while **Walgreens** and **Whole Foods** charge the **most** among the stores. 
+
+**Part E**:
+Inspect the coefficients from your fitted model. Which of these two possibilities looks right to you? Cite specific numerical evidence from your model. Try to put any difference between HEB and Central Market into the larger context: how big is the HEB/Central Market difference, compared to differences among other stores?
+
+```{r echo = FALSE}
+#LRM for Store
+linear_regression_model_store <- lm(Price ~ Product + Store, data = groceries)
+
+
+# Extract coefficients from the fitted model in Part D
+coefficients_store <- coef(linear_regression_model_store)
+
+# Extract coefficients for Central Market and H-E-B
+coef_central_market <- coefficients_store["StoreCentral Market"]
+coef_heb <- coefficients_store["StoreH-E-B "]
+# Calculate the difference between Central Market and HEB coefficients
+difference <- coef_central_market - coef_heb
+
+```
+
+```{r echo = FALSE}
+#Extract coefficent from all markets
+coef_cvs <- coefficients_store["StoreCVS"]
+coef_fiesta <- coefficients_store["StoreFiesta"]
+coef_fresh_plus <- coefficients_store["StoreFresh Plus"]
+coef_kroger <- coefficients_store["StoreKroger"]
+coef_kroger_fresh_fare <- coefficients_store["StoreKroger Fresh Fare"]
+coef_natural_grocers <- coefficients_store["StoreNatural Grocers"]
+coef_target <- coefficients_store["StoreTarget"]
+coef_walgreens <- coefficients_store["StoreWalgreens"]
+coef_walmart <- coefficients_store["StoreWalmart"]
+coef_wheatsville <- coefficients_store["StoreWheatsville Food Co-Op"]
+coef_whole_foods <- coefficients_store["StoreWhole Foods"]
+
+#Calculate different differences
+diff_2 <- coef_cvs - coef_fiesta
+diff_3 <- coef_fresh_plus - coef_kroger
+diff_4 <- coef_kroger_fresh_fare - coef_natural_grocers
+diff_5 <- coef_target - coef_walgreens
+diff_6 <- coef_walmart - coef_wheatsville
+diff_7 <- coef_whole_foods - coef_heb
+
+# Create a data frame for the differences
+differences_df <- data.frame(
+  Store = c("CVS - Fiesta", "Fresh Plus - Kroger", "Kroger Fresh Fare - Natural Grocers", 
+            "Target - Walgreens", "Walmart - Wheatsville", "Whole Foods - H-E-B", "H-E-B - Central Market"),
+  Difference = c(diff_2, diff_3, diff_4, diff_5, diff_6, diff_7, difference)
+)
+
+# Create a table
+table <- kable(differences_df, "html", caption = "Differences between store coefficients") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>%
+  row_spec(which(differences_df$Store == "H-E-B - Central Market"), color = "black", bold = TRUE)
+
+
+# Print the table
+table
+
+```
+
+
+The difference between Central Market and HEB coefficients is `r difference`. This is not as small as Fresh Plus and Kroger, with a `r diff_3` difference, but it is second smallest and not as large as H-E-B is to Whole Foods, with a difference of `r diff_7`.
+
+**Part F**: Based on the sign of the Income10K coefficient, do consumers in poorer ZIP codes seem to pay more or less for the same product, on average? How do you know? How large is the estimated size of the effect of Income10K on Price? 
+
+```{r echo = FALSE}
+# Create Income10K variable
+groceries <- groceries %>% mutate(Income10K = Income / 10000)
+
+# Fit a model for Price versus Product and Income10K
+model_income <- lm(Price ~ Product + Income10K, data = groceries)
+
+# Extract coefficients
+coefficients_income <- coef(summary(model_income))
+
+# Interpretation of coefficients
+income_coefficient <- coefficients_income["Income10K", "Estimate"]
+income_std_error <- coefficients_income["Income10K", "Std. Error"]
+
+
+# How large is the estimated size of the effect of Income10K on Price?
+income_std_dev <- sd(groceries$Income10K)
+effect_size <- income_coefficient * income_std_dev
+
+```
+
+Based on the sign of the Income10K coefficient, customers in poorer ZIP codes tend to pay more for the same products. The one-standard deviation increase in income of a ZIP code seems to be associated with a `r round(effect_size, 2)` standard-deviation change in the price that consumers in that ZIP code are expected to pay for the same product.
